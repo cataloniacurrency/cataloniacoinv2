@@ -1,12 +1,12 @@
 #include "sendcoinsentry.h"
 #include "ui_sendcoinsentry.h"
-
 #include "guiutil.h"
 #include "bitcoinunits.h"
 #include "addressbookpage.h"
 #include "walletmodel.h"
 #include "optionsmodel.h"
 #include "addresstablemodel.h"
+#include "stealth.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -24,12 +24,14 @@ SendCoinsEntry::SendCoinsEntry(QWidget *parent) :
 #if QT_VERSION >= 0x040700
     /* Do not move this to the XML file, Qt before 4.7 will choke on it */
     ui->addAsLabel->setPlaceholderText(tr("Enter a label for this address to add it to your address book"));
-    ui->payTo->setPlaceholderText(tr("Enter a Cataloniacoin address (e.g. Ler4HNAEfwYhBmGXcFP2Po1NpRUEiK8km2)"));
+    ui->payTo->setPlaceholderText(tr("Enter a cataloniacoin address example: xnA1PXzwBmDMywsgE7MJoXiQHUWXQb7SX4"));
+    ui->narration->setPlaceholderText(tr("Enter a short note to send with payment max 24 characters"));
 #endif
     setFocusPolicy(Qt::TabFocus);
     setFocusProxy(ui->payTo);
 
     GUIUtil::setupAddressWidget(ui->payTo, this);
+    ui->narration->setMaxLength(24);
 }
 
 SendCoinsEntry::~SendCoinsEntry()
@@ -60,6 +62,8 @@ void SendCoinsEntry::on_payTo_textChanged(const QString &address)
 {
     if(!model)
         return;
+
+
     // Fill in label from address book, if address has an associated label
     QString associatedLabel = model->getAddressTableModel()->labelForAddress(address);
     if(!associatedLabel.isEmpty())
@@ -88,6 +92,7 @@ void SendCoinsEntry::clear()
     ui->payTo->clear();
     ui->addAsLabel->clear();
     ui->payAmount->clear();
+    ui->narration->clear();
     ui->payTo->setFocus();
     // update the display unit, to not use the default ("BTC")
     updateDisplayUnit();
@@ -130,9 +135,15 @@ bool SendCoinsEntry::validate()
 SendCoinsRecipient SendCoinsEntry::getValue()
 {
     SendCoinsRecipient rv;
-
     rv.address = ui->payTo->text();
     rv.label = ui->addAsLabel->text();
+    rv.narration = ui->narration->text();
+    
+    if (rv.address.length() > 75 
+        && IsStealthAddress(rv.address.toStdString()))
+        rv.typeInd = AddressTableModel::AT_Stealth;
+    else
+        rv.typeInd = AddressTableModel::AT_Normal;    
     rv.amount = ui->payAmount->value();
 
     return rv;
@@ -145,20 +156,16 @@ QWidget *SendCoinsEntry::setupTabChain(QWidget *prev)
     QWidget::setTabOrder(ui->addressBookButton, ui->pasteButton);
     QWidget::setTabOrder(ui->pasteButton, ui->deleteButton);
     QWidget::setTabOrder(ui->deleteButton, ui->addAsLabel);
-    return ui->payAmount->setupTabChain(ui->addAsLabel);
+    QWidget::setTabOrder(ui->addAsLabel, ui->narration);
+    return ui->payAmount->setupTabChain(ui->narration);
 }
 
 void SendCoinsEntry::setValue(const SendCoinsRecipient &value)
 {
     ui->payTo->setText(value.address);
+    ui->narration->setText(value.narration);
     ui->addAsLabel->setText(value.label);
     ui->payAmount->setValue(value.amount);
-}
-
-void SendCoinsEntry::setAddress(const QString &address)
-{
-    ui->payTo->setText(address);
-    ui->payAmount->setFocus();
 }
 
 bool SendCoinsEntry::isClear()

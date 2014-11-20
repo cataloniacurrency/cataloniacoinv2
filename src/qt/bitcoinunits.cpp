@@ -1,4 +1,4 @@
-#include "bitcoinunits.h"
+﻿#include "bitcoinunits.h"
 
 #include <QStringList>
 
@@ -34,9 +34,9 @@ QString BitcoinUnits::name(int unit)
 {
     switch(unit)
     {
-    case BTC: return QString("CATc");
-    case mBTC: return QString("mCATc");
-    case uBTC: return QString::fromUtf8("μCATc");
+    case BTC: return QString("CATC");
+    case mBTC: return QString("mCATC");
+    case uBTC: return QString::fromUtf8("uCATC");
     default: return QString("???");
     }
 }
@@ -45,9 +45,9 @@ QString BitcoinUnits::description(int unit)
 {
     switch(unit)
     {
-    case BTC: return QString("Cataloniacoins");
-    case mBTC: return QString("Milli-Cataloniacoins (1 / 1,000)");
-    case uBTC: return QString("Micro-Cataloniacoins (1 / 1,000,000)");
+    case BTC: return QString("cataloniacoins");
+    case mBTC: return QString("Milli-cataloniacoins (1 / 1,000)");
+    case uBTC: return QString("Micro-cataloniacoins (1 / 1,000,000)");
     default: return QString("???");
     }
 }

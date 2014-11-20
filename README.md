@@ -1,2 +1,3 @@
-cataloniacoinv2
+cataloniacoin V3
+POD CryptoAsian
 ===============
