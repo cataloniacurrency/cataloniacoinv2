@@ -492,8 +492,8 @@ macx:HEADERS += src/qt/macdockiconhandler.h
 macx:OBJECTIVE_SOURCES += src/qt/macdockiconhandler.mm
 macx:LIBS += -framework Foundation -framework ApplicationServices -framework AppKit
 macx:DEFINES += MAC_OSX MSG_NOSIGNAL=0
-macx:ICON = src/qt/res/icons/xcloudcoin.icns
-macx:TARGET = xcloudcoin
+macx:ICON = src/qt/res/icons/cataloniacoin.icns
+macx:TARGET = cataloniacoin
 
 
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
