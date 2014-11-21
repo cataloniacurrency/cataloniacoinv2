@@ -1,2 +1,0 @@
-cataloniacoin V3
-===============
