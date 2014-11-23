@@ -6,8 +6,8 @@ DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE BOOST_THREAD_PROV
 CONFIG += no_include_pwd
 CONFIG += thread
 QMAKE_CXXFLAGS = -fpermissive
-QT += core gui network
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets webkitwidgets
+QT += core gui network webkit
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets webkitwidgets webkit
 lessThan(QT_MAJOR_VERSION, 5): CONFIG += static
 
 
@@ -44,7 +44,6 @@ win32 {
 #    BOOST_INCLUDE_PATH, BOOST_LIB_PATH, BDB_INCLUDE_PATH,
 #    BDB_LIB_PATH, OPENSSL_INCLUDE_PATH and OPENSSL_LIB_PATH respectively
 
-
 OBJECTS_DIR = build
 MOC_DIR = build
 UI_DIR = build
@@ -68,11 +67,8 @@ QMAKE_LFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
 # This can be enabled for Windows, when we switch to MinGW >= 4.4.x.
 }
 # for extra security on Windows: enable ASLR and DEP via GCC linker flags
-QMAKE_CXXFLAGS *= -D_FORTIFY_SOURCE=2
-win32:QMAKE_LFLAGS *= -Wl,--dynamicbase -Wl,--nxcompat
-# on Windows: enable GCC large address aware linker flag
-#win32:QMAKE_LFLAGS *= -Wl,--large-address-aware -static
-win32:QMAKE_LFLAGS *= -Wl,--large-address-awar
+win32:QMAKE_LFLAGS *= -Wl,--large-address-aware -static
+win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
 
 # use: qmake "USE_QRCODE=1"
 # libqrencode (http://fukuchi.org/works/qrencode/index.en.html) must be installed for support
@@ -122,7 +118,6 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     DEFINES += BITCOIN_NEED_QT_PLUGINS
     QTPLUGIN += qcncodecs qjpcodecs qtwcodecs qkrcodecs qtaccessiblewidgets
 }
-
 
 INCLUDEPATH += src/leveldb/include src/leveldb/helpers
 LIBS += $$PWD/src/leveldb/libleveldb.a $$PWD/src/leveldb/libmemenv.a
@@ -186,6 +181,7 @@ contains(USE_O3, 1) {
 
 QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -Wstack-protector
 
+
 # Input
 DEPENDPATH += src src/json src/qt
 HEADERS += src/qt/bitcoingui.h \
@@ -227,6 +223,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/zerocoin/ZeroTest.h \
     src/zerocoin/Zerocoin.h \
     src/serialize.h \
+    src/qt/tradepage.h \
     src/qt/exchangepage.h \
     src/qt/plugins/mrichtexteditor/mrichtextedit.h \
     src/qt/qvalidatedtextedit.h \
@@ -306,7 +303,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/messagepage.h \
     src/qt/messagemodel.h \
     src/txdb-leveldb.h \
+	src/qt/chatwindow.h \
 	src/qt/explorerpage.h \
+	src/qt/newspage.h \
 	src/qt/serveur.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
@@ -324,6 +323,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/bitcoinaddressvalidator.cpp \
     src/qt/plugins/mrichtexteditor/mrichtextedit.cpp \
     src/qt/qvalidatedtextedit.cpp \
+	src/qt/chatwindow.cpp \
     src/alert.cpp \
     src/version.cpp \
     src/sync.cpp \
@@ -335,6 +335,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/miner.cpp \
     src/init.cpp \
     src/net.cpp \
+    src/qt/tradepage.cpp \
     src/qt/exchangepage.cpp \
     src/irc.cpp \
     src/checkpoints.cpp \
@@ -374,6 +375,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/bitcoinunits.cpp \
     src/qt/qvaluecombobox.cpp \
     src/qt/explorerpage.cpp \
+    src/qt/newspage.cpp \
     src/qt/sendmessagesentry.cpp \
     src/qt/sendmessagesdialog.cpp \
     src/qt/askpassphrasedialog.cpp \
@@ -416,6 +418,8 @@ FORMS += \
     src/qt/forms/overviewpage.ui \
     src/qt/forms/sendcoinsentry.ui \
     src/qt/forms/explorerpage.ui \
+    src/qt/forms/newspage.ui \
+    src/qt/forms/tradepage.ui \
     src/qt/forms/exchangepage.ui \
     src/qt/forms/askpassphrasedialog.ui \
     src/qt/forms/rpcconsole.ui \
@@ -425,7 +429,8 @@ src/qt/forms/statisticspage.ui \
     src/qt/forms/messagepage.ui \
     src/qt/forms/sendmessagesentry.ui \
     src/qt/forms/sendmessagesdialog.ui \
-    src/qt/plugins/mrichtexteditor/mrichtextedit.ui
+    src/qt/plugins/mrichtexteditor/mrichtextedit.ui \
+	src/qt/forms/chatwindow.ui
 
 contains(USE_QRCODE, 1) {
 HEADERS += src/qt/qrcodedialog.h
@@ -461,13 +466,25 @@ isEmpty(BOOST_THREAD_LIB_SUFFIX) {
     BOOST_THREAD_LIB_SUFFIX = $$BOOST_LIB_SUFFIX
 }
 
-
+isEmpty(BDB_LIB_PATH) {
+    macx:BDB_LIB_PATH = /opt/local/lib/db48
+}
 
 isEmpty(BDB_LIB_SUFFIX) {
     macx:BDB_LIB_SUFFIX = -4.8
 }
 
+isEmpty(BDB_INCLUDE_PATH) {
+    macx:BDB_INCLUDE_PATH = /opt/local/include/db48
+}
 
+isEmpty(BOOST_LIB_PATH) {
+    macx:BOOST_LIB_PATH = /opt/local/lib
+}
+
+isEmpty(BOOST_INCLUDE_PATH) {
+    macx:BOOST_INCLUDE_PATH = /opt/local/include
+}
 
 windows:DEFINES += WIN32 WIN32_LEAN_AND_MEAN
 windows:RC_FILE = src/qt/res/bitcoin-qt.rc
@@ -495,7 +512,18 @@ macx:DEFINES += MAC_OSX MSG_NOSIGNAL=0
 macx:ICON = src/qt/res/icons/cataloniacoin.icns
 macx:TARGET = cataloniacoin
 
+BOOST_INCLUDE_PATH=/opt/local/include/boost
+          BOOST_LIB_PATH=/opt/local/lib
+          BDB_INCLUDE_PATH=/opt/local/include/db48
+          BDB_LIB_PATH=/opt/local/lib/db48
+          OPENSSL_INCLUDE_PATH=/opt/local/include/openssl
+          OPENSSL_LIB_PATH=/opt/local/lib
 
+          MINIUPNPC_INCLUDE_PATH=/opt/local/include/miniupnpc
+          MINIUPNPC_LIB_PATH=/opt/local/lib
+
+          QRENCODE_INCLUDE_PATH=/opt/local/include
+          QRENCODE_LIB_PATH=/opt/local/lib
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
 INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH
 LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,)
